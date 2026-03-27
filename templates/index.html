@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>CLiC - AI Digital FIR (BNS)</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <style>
+        body { background-color: #f4f7f6; font-family: 'Segoe UI', sans-serif; }
+        .navbar { background: #002D62; border-bottom: 3px solid #D4AF37; }
+        .card { border-radius: 15px; border: none; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        .suggestion-card { background: white; border-left: 5px solid #002D62; padding: 15px; margin-bottom: 12px; border-radius: 10px; transition: 0.3s; }
+        .suggestion-card:hover { transform: translateX(5px); box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+        .badge-bns { padding: 8px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; }
+        .example-badge { cursor: pointer; font-size: 0.75rem; transition: 0.2s; }
+        .example-badge:hover { background-color: #002D62 !important; color: white !important; }
+    </style>
+</head>
+<body>
+
+<nav class="navbar navbar-dark p-3 mb-4">
+    <div class="container">
+        <span class="navbar-brand fw-bold"><i class="bi bi-shield-check"></i> CLiC: AI-Powered BNS System</span>
+    </div>
+</nav>
+
+<div class="container mb-5">
+    <div class="row g-4">
+        <div class="col-md-6">
+            <div class="card p-4 h-100">
+                <h5 class="text-primary mb-3"><i class="bi bi-robot"></i> 1. Incident Analysis</h5>
+                <textarea id="description" class="form-control mb-2" rows="7" placeholder="Describe incident here..."></textarea>
+                
+                <div class="mb-3">
+                    <small class="text-muted d-block mb-1">Common Examples (Click to try):</small>
+                    <span class="badge bg-light text-primary border example-badge me-1" onclick="fillExample('Someone snatched my gold chain while walking')">Chain Snatching</span>
+                    <span class="badge bg-light text-primary border example-badge me-1" onclick="fillExample('A person cheated me of 50,000 rupees online')">Online Fraud</span>
+                    <span class="badge bg-light text-primary border example-badge" onclick="fillExample('Someone broke my car window and stole my laptop')">Theft</span>
+                </div>
+
+                <button onclick="getSuggestions()" class="btn btn-primary w-100 fw-bold">Analyze with AI</button>
+                <div id="results" class="mt-4"></div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card p-4">
+                <h5 class="text-success mb-3"><i class="bi bi-file-earmark-ruled"></i> 2. Official Registration</h5>
+                <form action="/submit_fir" method="POST" enctype="multipart/form-data" onsubmit="syncDesc()">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Full Name</label>
+                        <input type="text" name="name" class="form-control" required>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold">District</label>
+                            <select name="district" class="form-select" required>
+                                <option value="" selected disabled>Select District</option>
+                                <option value="Jaipur">Jaipur</option>
+                                <option value="Jodhpur">Jodhpur</option>
+                                <option value="Kota">Kota</option>
+                                <option value="Udaipur">Udaipur</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold">Police Station</label>
+                            <input type="text" name="police_station" class="form-control" placeholder="e.g. Malviya Nagar" required>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Specific Location</label>
+                        <input type="text" name="location" class="form-control" required>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3"><input type="date" name="incident_date" id="dateInput" class="form-control" required></div>
+                        <div class="col-md-6 mb-3"><input type="time" name="incident_time" class="form-control" required></div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold"><i class="bi bi-paperclip"></i> Evidence</label>
+                        <input type="file" name="evidence_files" id="evidenceInput" class="form-control" multiple onchange="listEvidence()">
+                        <div id="evidence-list" class="mt-2 small text-muted"></div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Selected BNS Sections</label>
+                        <div id="selected-list" class="p-3 border rounded bg-light" style="min-height: 60px;">
+                            <p id="no-selection" class="text-muted small mb-0">No sections added.</p>
+                        </div>
+                        <select id="bns_select" name="bns_sections" multiple class="d-none"></select>
+                    </div>
+
+                    <input type="hidden" name="description" id="hidden_desc">
+                    <button type="submit" class="btn btn-success w-100 py-3 fw-bold">DOWNLOAD BNS FIR PDF</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="lawModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content shadow border-0">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title"><i class="bi bi-info-circle"></i> Legal Detail</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <h6 class="fw-bold">Description:</h6>
+                <p id="modalDesc" class="text-muted small"></p>
+                <hr>
+                <h6 class="fw-bold text-danger">Punishment:</h6>
+                <p id="modalPunish" class="small mb-0"></p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.getElementById('dateInput').value = new Date().toISOString().split("T")[0];
+
+    function fillExample(val) {
+        document.getElementById('description').value = val;
+        getSuggestions();
+    }
+
+    function listEvidence() {
+        const input = document.getElementById('evidenceInput');
+        const list = document.getElementById('evidence-list');
+        list.innerHTML = input.files.length > 0 ? "Files: " + Array.from(input.files).map(f => f.name).join(", ") : "";
+    }
+
+    async function getSuggestions() {
+        const desc = document.getElementById('description').value;
+        const resDiv = document.getElementById('results');
+        if(!desc.trim()) return;
+
+        resDiv.innerHTML = '<div class="text-center p-3"><div class="spinner-border text-primary"></div></div>';
+        const resp = await fetch('/predict', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+            body: `description=${encodeURIComponent(desc)}`
+        });
+        const items = await resp.json();
+        resDiv.innerHTML = "<h6 class='mb-3 text-secondary'>AI BNS Suggestions:</h6>";
+        
+        items.forEach(item => {
+            const confidence = Math.round(item.score * 100);
+            const div = document.createElement('div');
+            div.className = "suggestion-card shadow-sm";
+            div.innerHTML = `
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <span class="badge bg-primary mb-1">Section ${item.section_no} BNS</span>
+                        <span class="badge bg-light text-dark border ms-1 small">${confidence}% Match</span>
+                        <strong class="d-block small mt-1">${item.offense}</strong>
+                        <a href="javascript:void(0)" onclick='showLaw(${JSON.stringify(item).replace(/'/g, "&apos;")})' class="text-primary fw-bold" style="font-size: 0.7rem; text-decoration: none;">
+                            <i class="bi bi-info-circle"></i> VIEW DETAIL
+                        </a>
+                    </div>
+                    <button class="btn btn-sm btn-outline-success" onclick="addSection('${item.section_no}')">ADD</button>
+                </div>`;
+            resDiv.appendChild(div);
+        });
+    }
+
+    function addSection(sec) {
+        document.getElementById('no-selection').classList.add('d-none');
+        const sel = document.getElementById('bns_select');
+        if([...sel.options].some(o => o.value === "BNS " + sec)) return;
+        const opt = document.createElement('option'); opt.value = "BNS " + sec; opt.selected = true; sel.add(opt);
+        const badge = document.createElement('span');
+        badge.className = "badge bg-primary badge-bns me-2 mb-2 d-inline-block shadow-sm";
+        badge.id = "badge-" + sec;
+        badge.innerHTML = `BNS ${sec} <i class="bi bi-x-circle ms-1" style="cursor:pointer" onclick="removeSection('${sec}')"></i>`;
+        document.getElementById('selected-list').appendChild(badge);
+    }
+
+    function removeSection(sec) {
+        document.getElementById('badge-' + sec).remove();
+        const sel = document.getElementById('bns_select');
+        for(let i=0; i<sel.options.length; i++) if(sel.options[i].value === "BNS " + sec) sel.remove(i);
+        if(sel.options.length === 0) document.getElementById('no-selection').classList.remove('d-none');
+    }
+
+    function showLaw(item) {
+        document.getElementById('modalDesc').innerText = item.description;
+        document.getElementById('modalPunish').innerText = item.punishment;
+        new bootstrap.Modal(document.getElementById('lawModal')).show();
+    }
+
+    function syncDesc() { document.getElementById('hidden_desc').value = document.getElementById('description').value; }
+</script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
